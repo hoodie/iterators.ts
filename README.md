@@ -1,0 +1,3 @@
+# Lazy Iterators in Typescript
+
+Javascript iterators suck so...
