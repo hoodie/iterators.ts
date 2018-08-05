@@ -63,6 +63,13 @@ describe('ProperIterator', () => {
             expect(counter.next().value).to.eq(-2);
             expect(counter.next().value).to.eq(-4);
         });
+
+        it('stops when done', () => {
+            const collection = Iter.from_array(['a', 'b', 'c'])
+                .map((x: string) => x.toUpperCase())
+                .collect_into_array()
+            expect(collection).to.deep.equal(['A','B','C']);
+        })
     });
 
     describe('.enumerate()', () => {
