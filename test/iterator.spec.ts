@@ -133,6 +133,8 @@ describe('ProperIterator', () => {
                 .collect_into_array();
             expect(collection1).to.deep.eq([3,4,5,6,7,8,9,10]);
 
+        });
+        it('works with take', () => {
             const collection2 = Iter.count_to(10)
                 .skip(2)
                 .take(5)

@@ -182,6 +182,20 @@ export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
     size_hint(): number {
         return this.size
     }
+
+    collect_into_array(): T[] {
+        const all = new Array<T>(this.size);
+        let nxt: IteratorResult<T> | undefined;
+        let i = 0
+        while (!nxt || !nxt.done) {
+            nxt = this.next();
+            if (nxt.done) {
+                break;
+            }
+            all[i++] = nxt.value;
+        }
+        return all;
+    }
 }
 
 /** adapters */
