@@ -2,9 +2,9 @@ export type Callback<T> = (input: T) => any;
 export type Predicate<T> = (input: T) => boolean;
 
 // const __dir = (content: any) => console.dir(content, {colors: true, depth: 10});
-const __dir = (content: any) => { };
+const __dir = (_content: any) => { };
 // const __log = (content: any) => console.dir(content);
-const __log = (content: any) => { };
+let __log = (_content: any) => { };
 
 /// Interface
 export interface IIter<T> {
@@ -150,7 +150,7 @@ export class SizedIter<T> extends Iter<T> implements ISizedIter<T> {
             v = n.value;
         }
     }
-    
+
 
     size_hint(): number {
         return this.size
@@ -231,11 +231,15 @@ namespace Adapter {
         }
 
         next() {
-            const item = this.iterator.next()
+            const {value, done} = this.iterator.next()
 
-            const mappedValue = this.callback(item.value)
+            if (done) {
+                return { value, done };
+            }
+
+            const mappedValue = this.callback(value)
             __log(`map -> ${mappedValue}`);
-            return { value: mappedValue, done: item.done }
+            return { value: mappedValue, done }
         }
     }
 
@@ -318,4 +322,6 @@ export namespace Iter {
 
 }
 
-
+export function enable_debug_logging() {
+    __log = (content: any) => console.dir(content);
+}
