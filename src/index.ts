@@ -3,7 +3,6 @@ export type Predicate<T> = (input: T) => boolean;
 
 // const __dir = (content: any) => console.dir(content, {colors: true, depth: 10});
 const __dir = (_content: any) => { };
-// const __log = (content: any) => console.dir(content);
 let __log = (_content: any) => { };
 
 /// Interface
@@ -55,7 +54,7 @@ export interface IIter<T> {
 export interface ISizedIter<T> extends IIter<T> {
     count(): number;
 
-    cycle(): Adapter.Cycle<T>;
+    cycle(): IIter<T>;
 
     last(): T | undefined;
 
@@ -69,6 +68,14 @@ export interface ISizedIter<T> extends IIter<T> {
  */
 export class Iter<T> implements IIter<T> {
 
+    static from_array<T>(a: Array<T>): ISizedIter<T> {
+        return new SizedIter(a[Symbol.iterator](), a.length);
+    }
+
+    static count_to(limit: number): ISizedIter<number> {
+        return new SizedIter(inner_count_to(limit), limit);
+    }
+
     constructor(protected iterator: Iterator<any>) { }
 
     /// protocol
@@ -79,32 +86,32 @@ export class Iter<T> implements IIter<T> {
 
     /// adapters
 
-    enumerate(): Adapter.Enumerate<T> {
-        return new Adapter.Enumerate(this);
+    enumerate(): EnumerateAdapter<T> {
+        return new EnumerateAdapter(this);
     }
 
-    filter(predicate: Predicate<T>): Adapter.Filter<T> {
-        return new Adapter.Filter(this, predicate);
+    filter(predicate: Predicate<T>): FilterAdapter<T> {
+        return new FilterAdapter(this, predicate);
     }
 
-    map<U>(callback: Callback<T, U>): Adapter.Map<T, U> {
-        return new Adapter.Map<T, U>(this, callback);
+    map<U>(callback: Callback<T, U>): MapAdapter<T, U> {
+        return new MapAdapter<T, U>(this, callback);
     }
 
-    take(limit: number): Adapter.Take<T> {
-        return new Adapter.Take(this, limit);
+    take(limit: number): TakeAdapter<T> {
+        return new TakeAdapter(this, limit);
     }
 
-    takeWhile(predicate: Predicate<T>): Adapter.TakeWhile<T> {
-        return new Adapter.TakeWhile(this, predicate);
+    takeWhile(predicate: Predicate<T>): TakeWhileAdapter<T> {
+        return new TakeWhileAdapter(this, predicate);
     }
 
-    with(callback: Callback<T, void>): Adapter.Each<T> {
-        return new Adapter.Each(this, callback);
+    with(callback: Callback<T, void>): EachAdapter<T> {
+        return new EachAdapter(this, callback);
     }
 
     // zip<O>(other: IIter<O>): IIter<T|O> {
-    //     return new Adapter.Zip(this, other);
+    //     return new ZipAdapter(this, other);
     // }
 
     /// consumers
@@ -134,8 +141,8 @@ export class SizedIter<T> extends Iter<T> implements ISizedIter<T> {
         return this.size_hint();
     }
 
-    cycle(): Adapter.Cycle<T> {
-        return new Adapter.Cycle(this);
+    cycle(): CycleAdapter<T> {
+        return new CycleAdapter(this);
     }
 
     last(): T | undefined {
@@ -162,143 +169,137 @@ export class SizedIter<T> extends Iter<T> implements ISizedIter<T> {
 }
 
 /** adapters */
-namespace Adapter {
 
+class CycleAdapter<T> extends Iter<T> {
+    private cache: Array<T>
 
-    export class Cycle<T> extends Iter<T> {
-        private cache: Array<T>
-
-        constructor(protected iterator: Iterator<any>) {
-            super(iterator);
-            this.cache = [];
-        }
-
-        next() {
-            const n = this.iterator.next();
-            if (n.done) {
-                this.iterator = (<Array<T>>this.cache)[Symbol.iterator]();
-                return this.iterator.next();
-            } else {
-                this.cache.push(n.value);
-                return n;
-            }
-        }
-
+    constructor(protected iterator: Iterator<T>) {
+        super(iterator);
+        this.cache = [];
     }
 
-    export class Each<T> extends Iter<T> {
-        constructor(protected iterator: Iterator<T>, protected callback: Callback<T, void>) {
-            super(iterator);
-        }
-
-        next() {
-            const item = this.iterator.next()
-            this.callback(item.value)
-            __log(`each -> ${item.value}`);
-            return item;
+    next() {
+        const n = this.iterator.next();
+        if (n.done) {
+            this.iterator = (<Array<T>>this.cache)[Symbol.iterator]();
+            return this.iterator.next();
+        } else {
+            this.cache.push(n.value);
+            return n;
         }
     }
 
-    export class Enumerate<T> extends Iter<[number, T]> {
-        private count = 0;
+}
 
-        constructor(protected iterator: Iterator<T>) {
-            super(iterator);
-        }
-
-        next(): IteratorResult<[number, T]> {
-            const item = this.iterator.next()
-            return { value: [this.count++, item.value], done: item.done };
-        }
+class EachAdapter<T> extends Iter<T> {
+    constructor(protected iterator: Iterator<T>, protected callback: Callback<T, void>) {
+        super(iterator);
     }
 
-    export class Filter<T> extends Iter<T> {
-        constructor(protected iterator: Iterator<T>, protected callback: Callback<T, boolean>) {
-            super(iterator);
-        }
-
-        next() {
-            while (true) {
-                const item = this.iterator.next()
-
-                if (this.callback(item.value)) {
-                    __log(`filter -> ${item.value}`);
-                    return item
-                }
-            }
-        }
-    }
-
-    export class Map<T, U> extends Iter<U> {
-        constructor(protected iterator: Iterator<T>, protected callback: Callback<T, U>) {
-            super(iterator);
-        }
-
-        next(): IteratorResult<U> {
-            const {value, done} = this.iterator.next()
-
-            if (done) {
-                return { value, done } as any;
-            }
-
-            const mappedValue: U = this.callback(value)
-            __log(`map -> ${mappedValue}`);
-            return { value: mappedValue, done }
-        }
-    }
-
-    export class Take<T> extends SizedIter<T> {
-        private took = 0;
-
-        constructor(protected iterator: Iterator<T>, private limit: number) {
-            super(iterator, limit);
-        }
-
-        next() {
-            if (this.took < this.limit) {
-                this.took++;
-                const n = this.iterator.next();
-                __log(`take -> ${n.value}`);
-                return n;
-            } else {
-                return { value: undefined, done: true } as any;
-            }
-        }
-    }
-
-    export class TakeWhile<T> extends Iter<T> {
-        constructor(protected iterator: Iterator<T>, private predicate: Predicate<T>) {
-            super(iterator);
-        }
-
-        next() {
-            const n = this.iterator.next();
-            if (this.predicate(n.value)) {
-                return n;
-            } else {
-                return { value: undefined, done: true } as any;
-            }
-        }
-    }
-
-    export class Zip<O> extends Iter<O> {
-        private iterators: Iterator<any>[];
-
-        constructor(protected iterator: Iterator<any>, private other: Iterator<O>) {
-            super(iterator);
-            this.iterators = [iterator, other];
-        }
-
-        next(): never {
-            throw new Error("unimplemented");
-            // return {value: undefined as any, done: true}
-        }
-
+    next() {
+        const item = this.iterator.next()
+        this.callback(item.value)
+        __log(`each -> ${item.value}`);
+        return item;
     }
 }
 
+class EnumerateAdapter<T> extends Iter<[number, T]> {
+    private count = 0;
 
+    constructor(protected iterator: Iterator<T>) {
+        super(iterator);
+    }
 
+    next(): IteratorResult<[number, T]> {
+        const item = this.iterator.next()
+        return { value: [this.count++, item.value], done: item.done };
+    }
+}
+
+class FilterAdapter<T> extends Iter<T> {
+    constructor(protected iterator: Iterator<T>, protected callback: Callback<T, boolean>) {
+        super(iterator);
+    }
+
+    next() {
+        while (true) {
+            const item = this.iterator.next()
+
+            if (this.callback(item.value)) {
+                __log(`filter -> ${item.value}`);
+                return item
+            }
+        }
+    }
+}
+
+class MapAdapter<T, U> extends Iter<U> {
+    constructor(protected iterator: Iterator<T>, protected callback: Callback<T, U>) {
+        super(iterator);
+    }
+
+    next(): IteratorResult<U> {
+        const {value, done} = this.iterator.next()
+
+        if (done) {
+            return { value, done } as any;
+        }
+
+        const mappedValue: U = this.callback(value)
+        __log(`map -> ${mappedValue}`);
+        return { value: mappedValue, done }
+    }
+}
+
+class TakeAdapter<T> extends SizedIter<T> {
+    private took = 0;
+
+    constructor(protected iterator: Iterator<T>, private limit: number) {
+        super(iterator, limit);
+    }
+
+    next() {
+        if (this.took < this.limit) {
+            this.took++;
+            const n = this.iterator.next();
+            __log(`take -> ${n.value}`);
+            return n;
+        } else {
+            return { value: undefined, done: true } as any;
+        }
+    }
+}
+
+class TakeWhileAdapter<T> extends Iter<T> {
+    constructor(protected iterator: Iterator<T>, private predicate: Predicate<T>) {
+        super(iterator);
+    }
+
+    next() {
+        const n = this.iterator.next();
+        if (this.predicate(n.value)) {
+            return n;
+        } else {
+            return { value: undefined, done: true } as any;
+        }
+    }
+}
+
+class ZipAdapter<O> extends Iter<O> {
+    private iterators: Iterator<any>[];
+
+    constructor(protected iterator: Iterator<any>, private other: Iterator<O>) {
+        super(iterator);
+        this.iterators = [iterator, other];
+    }
+
+    next(): never {
+        throw new Error("unimplemented");
+        // return {value: undefined as any, done: true}
+    }
+
+}
 
 /// utilities
 
@@ -315,17 +316,6 @@ function* inner_count_to(limit: number): IterableIterator<number> {
     }
 }
 
-export namespace Iter {
-    export function from_array<T>(a: Array<T>): ISizedIter<T> {
-        return new SizedIter(a[Symbol.iterator](), a.length);
-    }
-
-    export function count_to(limit: number): ISizedIter<number> {
-        return new SizedIter(inner_count_to(limit), limit);
-    }
-
-}
-
 export function enable_debug_logging() {
-    __log = (content: any) => console.dir(content);
+    __log = (content: any) => console.log(`   ${content}`);
 }
