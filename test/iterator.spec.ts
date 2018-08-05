@@ -131,10 +131,6 @@ describe('ProperIterator', () => {
        }) ;
     });
 
-    it.skip('forEach', () => {
-        const counter = Iter.count_to(5).with(console.log).collect_into_array();
-    });
-
     describe('Sized Iterators', () => {
         it('gives a proper size hint', () => {
             const a = [1, 2, 3, 4, 5];

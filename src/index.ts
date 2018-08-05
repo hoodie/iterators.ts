@@ -5,22 +5,23 @@ export type Predicate<T> = (input: T) => boolean;
 const __dir = (_content: any) => { };
 let __log = (_content: any) => { };
 
+
 /// Interface
-export interface IIter<T> {
+export interface LazyIterator<T> extends Iterator<T> {
     next(value?: any): IteratorResult<T>;
 
     /// Adapters
 
     // chain<U extends ProperIterator><other: U>: ProperIterator<T>;
 
-    enumerate(): IIter<[number, T]>;
+    enumerate(): LazyIterator<[number, T]>;
 
     /* Iterator skipping all elements which don't meet the given predicate */
-    filter(predicate: Predicate<T>): IIter<T>;
+    filter(predicate: Predicate<T>): LazyIterator<T>;
 
     /* Iterator applying the given callback to each element */
-    map<V, U extends [number, V]>(callback: Callback<T, U>): IIter<[number, V]>;
-    map<U>(callback: Callback<T, U>): IIter<U>;
+    map<V, U extends [number, V]>(callback: Callback<T, U>): LazyIterator<[number, V]>;
+    map<U>(callback: Callback<T, U>): LazyIterator<U>;
 
     // max / min
     // partition
@@ -28,15 +29,15 @@ export interface IIter<T> {
     // skip
     // step_by(step: number): number;
 
-    take(limit: number): ISizedIter<T>;
+    take(limit: number): SizedLazyIterator<T>;
 
     /* Iterator yielding elements while predicate is `true` */
-    takeWhile(predicate: Predicate<T>): IIter<T>;
+    takeWhile(predicate: Predicate<T>): LazyIterator<T>;
 
     // window
 
     /* like map, without modifying elements*/
-    with(callback: Callback<T, void>): IIter<T>;
+    with(callback: Callback<T, void>): LazyIterator<T>;
 
     // zip<O>(other: IIter<O>): IIter<T|O>;
 
@@ -51,10 +52,10 @@ export interface IIter<T> {
     collect_into_array(): Array<T>;
 }
 
-export interface ISizedIter<T> extends IIter<T> {
+export interface SizedLazyIterator<T> extends LazyIterator<T> {
     count(): number;
 
-    cycle(): IIter<T>;
+    cycle(): LazyIterator<T>;
 
     last(): T | undefined;
 
@@ -66,22 +67,25 @@ export interface ISizedIter<T> extends IIter<T> {
  * Base Iterator
  * T is
  */
-export class Iter<T> implements IIter<T> {
+export class Iter<T> implements LazyIterator<T> {
 
-    static from_array<T>(a: Array<T>): ISizedIter<T> {
+    static from_array<T>(a: Array<T>): SizedLazyIterator<T> {
         return new SizedIter(a[Symbol.iterator](), a.length);
     }
 
-    static count_to(limit: number): ISizedIter<number> {
+    static count_to(limit: number): SizedLazyIterator<number> {
         return new SizedIter(inner_count_to(limit), limit);
     }
 
-    constructor(protected iterator: Iterator<any>) { }
+    constructor(protected iterator?: Iterator<any>) { }
 
-    /// protocol
-
-    next(value?: any): IteratorResult<T> {
-        return this.iterator.next(value);
+    /// Iterable Protocol
+    next(value?: T): IteratorResult<T> {
+        if (!!this.iterator) {
+            return this.iterator.next(value);
+        } else {
+            return {value: undefined, done: true} as any;
+        }
     }
 
     /// adapters
@@ -106,8 +110,8 @@ export class Iter<T> implements IIter<T> {
         return new TakeWhileAdapter(this, predicate);
     }
 
-    with(callback: Callback<T, void>): EachAdapter<T> {
-        return new EachAdapter(this, callback);
+    with(callback: Callback<T, void>): WithAdapter<T> {
+        return new WithAdapter(this, callback);
     }
 
     // zip<O>(other: IIter<O>): IIter<T|O> {
@@ -130,11 +134,11 @@ export class Iter<T> implements IIter<T> {
     }
 }
 
-export class SizedIter<T> extends Iter<T> implements ISizedIter<T> {
+export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
     private __last_element?: T;
 
     constructor(protected iterator: Iterator<T>, protected size: number) {
-        super(iterator);
+        super();
     }
 
     count(): number {
@@ -174,11 +178,11 @@ class CycleAdapter<T> extends Iter<T> {
     private cache: Array<T>
 
     constructor(protected iterator: Iterator<T>) {
-        super(iterator);
+        super();
         this.cache = [];
     }
 
-    next() {
+    next(): IteratorResult<T> {
         const n = this.iterator.next();
         if (n.done) {
             this.iterator = (<Array<T>>this.cache)[Symbol.iterator]();
@@ -191,9 +195,9 @@ class CycleAdapter<T> extends Iter<T> {
 
 }
 
-class EachAdapter<T> extends Iter<T> {
+class WithAdapter<T> extends Iter<T> {
     constructor(protected iterator: Iterator<T>, protected callback: Callback<T, void>) {
-        super(iterator);
+        super();
     }
 
     next() {
@@ -207,8 +211,8 @@ class EachAdapter<T> extends Iter<T> {
 class EnumerateAdapter<T> extends Iter<[number, T]> {
     private count = 0;
 
-    constructor(protected iterator: Iterator<T>) {
-        super(iterator);
+    constructor(protected iterator: LazyIterator<T>) {
+        super();
     }
 
     next(): IteratorResult<[number, T]> {
@@ -219,7 +223,7 @@ class EnumerateAdapter<T> extends Iter<[number, T]> {
 
 class FilterAdapter<T> extends Iter<T> {
     constructor(protected iterator: Iterator<T>, protected callback: Callback<T, boolean>) {
-        super(iterator);
+        super();
     }
 
     next() {
@@ -236,7 +240,7 @@ class FilterAdapter<T> extends Iter<T> {
 
 class MapAdapter<T, U> extends Iter<U> {
     constructor(protected iterator: Iterator<T>, protected callback: Callback<T, U>) {
-        super(iterator);
+        super();
     }
 
     next(): IteratorResult<U> {
@@ -273,7 +277,7 @@ class TakeAdapter<T> extends SizedIter<T> {
 
 class TakeWhileAdapter<T> extends Iter<T> {
     constructor(protected iterator: Iterator<T>, private predicate: Predicate<T>) {
-        super(iterator);
+        super();
     }
 
     next() {
@@ -290,7 +294,7 @@ class ZipAdapter<O> extends Iter<O> {
     private iterators: Iterator<any>[];
 
     constructor(protected iterator: Iterator<any>, private other: Iterator<O>) {
-        super(iterator);
+        super();
         this.iterators = [iterator, other];
     }
 
