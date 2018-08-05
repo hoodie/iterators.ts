@@ -1,4 +1,4 @@
-export type Callback<T> = (input: T) => any;
+export type Callback<T, U> = (input: T) => U;
 export type Predicate<T> = (input: T) => boolean;
 
 // const __dir = (content: any) => console.dir(content, {colors: true, depth: 10});
@@ -20,7 +20,8 @@ export interface IIter<T> {
     filter(predicate: Predicate<T>): IIter<T>;
 
     /* Iterator applying the given callback to each element */
-    map(callback: Callback<T>): IIter<T>;
+    map<V, U extends [number, V]>(callback: Callback<T, U>): IIter<[number, V]>;
+    map<U>(callback: Callback<T, U>): IIter<U>;
 
     // max / min
     // partition
@@ -36,7 +37,7 @@ export interface IIter<T> {
     // window
 
     /* like map, without modifying elements*/
-    with(callback: Callback<T>): IIter<T>;
+    with(callback: Callback<T, void>): IIter<T>;
 
     // zip<O>(other: IIter<O>): IIter<T|O>;
 
@@ -62,7 +63,10 @@ export interface ISizedIter<T> extends IIter<T> {
 
 }
 
-/// Base
+/**
+ * Base Iterator
+ * T is
+ */
 export class Iter<T> implements IIter<T> {
 
     constructor(protected iterator: Iterator<any>) { }
@@ -83,8 +87,8 @@ export class Iter<T> implements IIter<T> {
         return new Adapter.Filter(this, predicate);
     }
 
-    map(callback: Callback<T>): Adapter.Map<T> {
-        return new Adapter.Map(this, callback);
+    map<U>(callback: Callback<T, U>): Adapter.Map<T, U> {
+        return new Adapter.Map<T, U>(this, callback);
     }
 
     take(limit: number): Adapter.Take<T> {
@@ -95,7 +99,7 @@ export class Iter<T> implements IIter<T> {
         return new Adapter.TakeWhile(this, predicate);
     }
 
-    with(callback: Callback<T>): Adapter.Each<T> {
+    with(callback: Callback<T, void>): Adapter.Each<T> {
         return new Adapter.Each(this, callback);
     }
 
@@ -183,7 +187,7 @@ namespace Adapter {
     }
 
     export class Each<T> extends Iter<T> {
-        constructor(protected iterator: Iterator<T>, protected callback: Callback<T>) {
+        constructor(protected iterator: Iterator<T>, protected callback: Callback<T, void>) {
             super(iterator);
         }
 
@@ -209,7 +213,7 @@ namespace Adapter {
     }
 
     export class Filter<T> extends Iter<T> {
-        constructor(protected iterator: Iterator<T>, protected callback: Callback<T>) {
+        constructor(protected iterator: Iterator<T>, protected callback: Callback<T, boolean>) {
             super(iterator);
         }
 
@@ -225,19 +229,19 @@ namespace Adapter {
         }
     }
 
-    export class Map<T> extends Iter<T> {
-        constructor(protected iterator: Iterator<T>, protected callback: Callback<T>) {
+    export class Map<T, U> extends Iter<U> {
+        constructor(protected iterator: Iterator<T>, protected callback: Callback<T, U>) {
             super(iterator);
         }
 
-        next() {
+        next(): IteratorResult<U> {
             const {value, done} = this.iterator.next()
 
             if (done) {
-                return { value, done };
+                return { value, done } as any;
             }
 
-            const mappedValue = this.callback(value)
+            const mappedValue: U = this.callback(value)
             __log(`map -> ${mappedValue}`);
             return { value: mappedValue, done }
         }

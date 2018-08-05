@@ -70,6 +70,20 @@ describe('ProperIterator', () => {
                 .collect_into_array()
             expect(collection).to.deep.equal(['A','B','C']);
         })
+
+        it('infers return type from callback', () => { // only needs to compile
+            const collection = Iter.from_array([1, 2, 3])
+                .map((x) => `${x} ✔`)
+                .map((x) => x.toUpperCase())
+                .collect_into_array()
+            const it = Iter.from_array(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'])
+                .enumerate()
+                .map(([k, v]) => [k, v.toUpperCase()])
+                .filter(([k, v]) => k % 2 == 0)
+                .map(([, v]) => v)
+            expect(collection).to.deep.equal(['1 ✔', '2 ✔', '3 ✔']);
+        })
+
     });
 
     describe('.enumerate()', () => {
