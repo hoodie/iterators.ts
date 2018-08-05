@@ -1,8 +1,9 @@
-import * as chai from 'chai';
-import * as mocha from 'mocha';
+import 'chai';
+import 'mocha';
 import { expect } from 'chai';
 
-import { Iter } from '../src';
+import { Iter, enable_debug_logging } from '../src';
+// enable_debug_logging();
 
 describe('ProperIterator', () => {
 
@@ -108,7 +109,21 @@ describe('ProperIterator', () => {
             const counter = Iter.count_to(5).take(2);
             expect(counter.size_hint()).to.eq(2);
         });
+    });
 
+    describe('.skip()', () => {
+        it('skips', () => {
+            const collection1 = Iter.count_to(10)
+                .skip(2)
+                .collect_into_array();
+            expect(collection1).to.deep.eq([3,4,5,6,7,8,9,10]);
+
+            const collection2 = Iter.count_to(10)
+                .skip(2)
+                .take(5)
+                .collect_into_array();
+            expect(collection2).to.deep.eq([3,4,5,6,7]);
+        });
     });
 
     describe('.collect_to_array()', () => {

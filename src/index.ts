@@ -30,6 +30,7 @@ export interface LazyIterator<T> extends Iterator<T> {
     // step_by(step: number): number;
 
     take(limit: number): SizedLazyIterator<T>;
+    skip(limit: number): LazyIterator<T>;
 
     /* Iterator yielding elements while predicate is `true` */
     takeWhile(predicate: Predicate<T>): LazyIterator<T>;
@@ -60,7 +61,6 @@ export interface SizedLazyIterator<T> extends LazyIterator<T> {
     last(): T | undefined;
 
     size_hint(): number;
-
 }
 
 /**
@@ -70,11 +70,11 @@ export interface SizedLazyIterator<T> extends LazyIterator<T> {
 export class Iter<T> implements LazyIterator<T> {
 
     static from_array<T>(a: Array<T>): SizedLazyIterator<T> {
-        return new SizedIter(a[Symbol.iterator](), a.length);
+        return new SizedIter(a.length, a[Symbol.iterator]());
     }
 
     static count_to(limit: number): SizedLazyIterator<number> {
-        return new SizedIter(inner_count_to(limit), limit);
+        return new SizedIter(limit, inner_count_to(limit));
     }
 
     constructor(protected iterator?: Iterator<any>) { }
@@ -106,6 +106,10 @@ export class Iter<T> implements LazyIterator<T> {
         return new TakeAdapter(this, limit);
     }
 
+    skip(limit: number): SkipAdapter<T> {
+        return new SkipAdapter(this, limit);
+    }
+
     takeWhile(predicate: Predicate<T>): TakeWhileAdapter<T> {
         return new TakeWhileAdapter(this, predicate);
     }
@@ -113,6 +117,7 @@ export class Iter<T> implements LazyIterator<T> {
     with(callback: Callback<T, void>): WithAdapter<T> {
         return new WithAdapter(this, callback);
     }
+
 
     // zip<O>(other: IIter<O>): IIter<T|O> {
     //     return new ZipAdapter(this, other);
@@ -137,7 +142,7 @@ export class Iter<T> implements LazyIterator<T> {
 export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
     private __last_element?: T;
 
-    constructor(protected iterator: Iterator<T>, protected size: number) {
+    constructor(protected size: number, protected iterator: Iterator<T>) {
         super();
     }
 
@@ -156,7 +161,7 @@ export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
 
         let v = undefined;
         while (true) {
-            let n = this.iterator.next();
+            let n = this.iterator!.next();
             __dir({ n, v });
             if (n.done) {
                 this.__last_element = v;
@@ -260,7 +265,7 @@ class TakeAdapter<T> extends SizedIter<T> {
     private took = 0;
 
     constructor(protected iterator: Iterator<T>, private limit: number) {
-        super(iterator, limit);
+        super(limit, iterator);
     }
 
     next() {
@@ -272,6 +277,23 @@ class TakeAdapter<T> extends SizedIter<T> {
         } else {
             return { value: undefined, done: true } as any;
         }
+    }
+}
+
+class SkipAdapter<T> extends Iter<T> {
+
+    constructor(protected iterator: Iterator<T>, skip: number) {
+        super();
+        __log(`skip -> ${skip} values`);
+        for (let i = 0; i < skip; i++) {
+            this.iterator.next();
+        }
+    }
+
+    next() {
+            const n = this.iterator.next();
+            __log(`take -> ${n.value}`);
+            return n;
     }
 }
 
