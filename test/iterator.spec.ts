@@ -9,7 +9,6 @@ describe('ProperIterator', () => {
 
     describe('generate', () => {
         it('.from_array([...])', () => {
-
             const counter = Iter.from_array([1, 2, 3, 4, 5]);
 
             expect(counter.next().value).to.eq(1);
@@ -30,13 +29,7 @@ describe('ProperIterator', () => {
         });
     });
 
-    describe('.map() and .filter()', () => {
-        it('filters', () => {
-            const counter = Iter.count_to(5).filter(x => x % 2 == 0);
-            expect(counter.next().value).to.eq(2);
-            expect(counter.next().value).to.eq(4);
-        });
-
+    describe('.map()', () => {
         it('maps', () => {
             const counter = Iter.count_to(5).map(x => -x);
 
@@ -45,24 +38,6 @@ describe('ProperIterator', () => {
             expect(counter.next().value).to.eq(-3);
             expect(counter.next().value).to.eq(-4);
             expect(counter.next().value).to.eq(-5);
-        });
-
-        it('maps and filters', () => {
-            const counter = Iter.count_to(5)
-                .map(x => -x)
-                .filter(x => x % 2 == 0);
-
-            expect(counter.next().value).to.eq(-2);
-            expect(counter.next().value).to.eq(-4);
-        });
-
-        it('filters and maps', () => {
-            const counter = Iter.count_to(5)
-                .filter(x => x % 2 == 0)
-                .map(x => -x);
-
-            expect(counter.next().value).to.eq(-2);
-            expect(counter.next().value).to.eq(-4);
         });
 
         it('stops when done', () => {
@@ -84,6 +59,46 @@ describe('ProperIterator', () => {
                 .map(([, v]) => v)
             expect(collection).to.deep.equal(['1 ✔', '2 ✔', '3 ✔']);
         })
+
+        it('terminates', () => {
+            const collection = Iter.from_array([])
+                .map(x => !!x)
+                .collect_into_array();
+        })
+    });
+
+    describe('.filter()', () => {
+        it('filters', () => {
+            const counter = Iter.count_to(5).filter(x => x % 2 == 0);
+            expect(counter.next().value).to.eq(2);
+            expect(counter.next().value).to.eq(4);
+        });
+
+        it('terminates', () => {
+            Iter.from_array([])
+                .filter(x => !!x)
+                .collect_into_array();
+        })
+    });
+
+    describe('.map() and .filter()', () => {
+        it('maps and filters', () => {
+            const counter = Iter.count_to(5)
+                .map(x => -x)
+                .filter(x => x % 2 == 0);
+
+            expect(counter.next().value).to.eq(-2);
+            expect(counter.next().value).to.eq(-4);
+        });
+
+        it('filters and maps', () => {
+            const counter = Iter.count_to(5)
+                .filter(x => x % 2 == 0)
+                .map(x => -x);
+
+            expect(counter.next().value).to.eq(-2);
+            expect(counter.next().value).to.eq(-4);
+        });
 
     });
 
@@ -123,6 +138,21 @@ describe('ProperIterator', () => {
                 .take(5)
                 .collect_into_array();
             expect(collection2).to.deep.eq([3,4,5,6,7]);
+        });
+    });
+
+    describe.skip('.skipWhile()', () => {
+        it('skips while', () => {
+            const collection1 = Iter.count_to(10)
+                .skipWhile(x => x < 6)
+                .collect_into_array();
+            expect(collection1).to.deep.eq([6, 7, 8, 9, 10]);
+
+            const collection2 = Iter.from_array(['a', 'x', 'f', 3, 4, 5, 6, 7, 8])
+                .skipWhile(x => typeof x === 'string')
+                .take(5)
+                .collect_into_array();
+            expect(collection2).to.deep.eq([3, 4, 5, 6, 7]);
         });
     });
 

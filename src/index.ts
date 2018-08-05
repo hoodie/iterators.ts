@@ -26,11 +26,11 @@ export interface LazyIterator<T> extends Iterator<T> {
     // max / min
     // partition
     // rev (requires double ended iterator)
-    // skip
     // step_by(step: number): number;
+    skip(limit: number): LazyIterator<T>;
+    skipWhile(predicate: Predicate<T>): LazyIterator<T>;
 
     take(limit: number): SizedLazyIterator<T>;
-    skip(limit: number): LazyIterator<T>;
 
     /* Iterator yielding elements while predicate is `true` */
     takeWhile(predicate: Predicate<T>): LazyIterator<T>;
@@ -110,6 +110,10 @@ export class Iter<T> implements LazyIterator<T> {
         return new SkipAdapter(this, limit);
     }
 
+    skipWhile(predicate: Predicate<T>): SkipWhileAdapter<T> {
+        return new SkipWhileAdapter(this, predicate);
+    }
+
     takeWhile(predicate: Predicate<T>): TakeWhileAdapter<T> {
         return new TakeWhileAdapter(this, predicate);
     }
@@ -125,11 +129,14 @@ export class Iter<T> implements LazyIterator<T> {
 
     /// consumers
 
+    // find(): T | undefined;
+
     collect_into_array(): T[] {
         //return [...this];
         const all = [];
-        while (true) {
-            const nxt = this.next();
+        let nxt: IteratorResult<T> | undefined;
+        while (!nxt || !nxt.done) {
+            nxt = this.next();
             if (nxt.done) {
                 break;
             }
@@ -227,7 +234,7 @@ class EnumerateAdapter<T> extends Iter<[number, T]> {
 }
 
 class FilterAdapter<T> extends Iter<T> {
-    constructor(protected iterator: Iterator<T>, protected callback: Callback<T, boolean>) {
+    constructor(protected iterator: Iterator<T>, protected predicate: Predicate<T>) {
         super();
     }
 
@@ -235,7 +242,8 @@ class FilterAdapter<T> extends Iter<T> {
         while (true) {
             const item = this.iterator.next()
 
-            if (this.callback(item.value)) {
+            if (item.done) { return item }
+            if (this.predicate(item.value)) {
                 __log(`filter -> ${item.value}`);
                 return item
             }
@@ -261,6 +269,35 @@ class MapAdapter<T, U> extends Iter<U> {
     }
 }
 
+class SkipAdapter<T> extends Iter<T> {
+
+    constructor(protected iterator: Iterator<T>, skip: number) {
+        super();
+        __log(`skip -> ${skip} values`);
+        for (let i = 0; i < skip; i++) {
+            this.iterator.next();
+        }
+    }
+
+    next() {
+            const n = this.iterator.next();
+            __log(`take -> ${n.value}`);
+            return n;
+    }
+}
+
+class SkipWhileAdapter<T> extends Iter<T> {
+  private first: T | undefined;
+  constructor(protected iterator: Iterator<T>, predicate: Predicate<T>) {
+    super();
+  }
+
+  // TODO: requires find()
+  next(): never {
+    throw new Error("unimplemented");
+  }
+}
+
 class TakeAdapter<T> extends SizedIter<T> {
     private took = 0;
 
@@ -277,23 +314,6 @@ class TakeAdapter<T> extends SizedIter<T> {
         } else {
             return { value: undefined, done: true } as any;
         }
-    }
-}
-
-class SkipAdapter<T> extends Iter<T> {
-
-    constructor(protected iterator: Iterator<T>, skip: number) {
-        super();
-        __log(`skip -> ${skip} values`);
-        for (let i = 0; i < skip; i++) {
-            this.iterator.next();
-        }
-    }
-
-    next() {
-            const n = this.iterator.next();
-            __log(`take -> ${n.value}`);
-            return n;
     }
 }
 
