@@ -51,7 +51,7 @@ export interface LazyIterator<T> extends Iterator<T> {
     // sum(acc: T, callback: (a: T, b: T) => T):  T;
     // fold(acc: T, callback: (a: T, b: T) => T):  T;
 
-    collect_into_array(): Array<T>;
+    intoArray(): Array<T>;
 }
 
 export interface SizedLazyIterator<T> extends LazyIterator<T> {
@@ -61,7 +61,7 @@ export interface SizedLazyIterator<T> extends LazyIterator<T> {
 
     last(): T | undefined;
 
-    size_hint(): number;
+    sizeHint(): number;
 }
 
 /**
@@ -70,11 +70,11 @@ export interface SizedLazyIterator<T> extends LazyIterator<T> {
  */
 export class Iter<T> implements LazyIterator<T> {
 
-    static from_array<T>(a: Array<T>): SizedLazyIterator<T> {
+    static fromArray<T>(a: Array<T>): SizedLazyIterator<T> {
         return new SizedIter(a.length, a[Symbol.iterator]());
     }
 
-    static count_to(limit: number): SizedLazyIterator<number> {
+    static countTo(limit: number): SizedLazyIterator<number> {
         return new SizedIter(limit, inner_count_to(limit));
     }
 
@@ -141,7 +141,7 @@ export class Iter<T> implements LazyIterator<T> {
 
     /// consumers
 
-    collect_into_array(): T[] {
+    intoArray(): T[] {
         //return [...this];
         const all = [];
         let nxt: IteratorResult<T> | undefined;
@@ -157,14 +157,14 @@ export class Iter<T> implements LazyIterator<T> {
 }
 
 export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
-    private __last_element?: T;
+    private __lastElement?: T;
 
     constructor(protected size: number, protected iterator: Iterator<T>) {
         super();
     }
 
     count(): number {
-        return this.size_hint();
+        return this.sizeHint();
     }
 
     cycle(): CycleAdapter<T> {
@@ -172,8 +172,8 @@ export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
     }
 
     last(): T | undefined {
-        if (this.__last_element !== undefined) {
-            return this.__last_element;
+        if (this.__lastElement !== undefined) {
+            return this.__lastElement;
         }
 
         let v = undefined;
@@ -181,18 +181,18 @@ export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
             let n = this.iterator!.next();
             __dir({ n, v });
             if (n.done) {
-                this.__last_element = v;
+                this.__lastElement = v;
                 return v;
             }
             v = n.value;
         }
     }
 
-    size_hint(): number {
+    sizeHint(): number {
         return this.size
     }
 
-    collect_into_array(): T[] {
+    intoArray(): T[] {
         const all = new Array<T>(this.size);
         let nxt: IteratorResult<T> | undefined;
         let i = 0

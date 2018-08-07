@@ -9,7 +9,7 @@ describe('LazyIterator', () => {
 
     describe('generate', () => {
         it('.from_array([...])', () => {
-            const counter = Iter.from_array([1, 2, 3, 4, 5]);
+            const counter = Iter.fromArray([1, 2, 3, 4, 5]);
 
             expect(counter.next().value).to.eq(1);
             expect(counter.next().value).to.eq(2);
@@ -20,7 +20,7 @@ describe('LazyIterator', () => {
         });
 
         it('.count_to(n)', () => {
-            const counter = Iter.count_to(5);
+            const counter = Iter.countTo(5);
             expect(counter.next().value).to.eq(1);
             expect(counter.next().value).to.eq(2);
             expect(counter.next().value).to.eq(3);
@@ -31,7 +31,7 @@ describe('LazyIterator', () => {
 
     describe('.map()', () => {
         it('maps', () => {
-            const counter = Iter.count_to(5).map(x => -x);
+            const counter = Iter.countTo(5).map(x => -x);
 
             expect(counter.next().value).to.eq(-1);
             expect(counter.next().value).to.eq(-2);
@@ -41,18 +41,18 @@ describe('LazyIterator', () => {
         });
 
         it('stops when done', () => {
-            const collection = Iter.from_array(['a', 'b', 'c'])
+            const collection = Iter.fromArray(['a', 'b', 'c'])
                 .map((x: string) => x.toUpperCase())
-                .collect_into_array()
+                .intoArray()
             expect(collection).to.deep.equal(['A','B','C']);
         })
 
         it('infers return type from callback', () => { // only needs to compile
-            const collection = Iter.from_array([1, 2, 3])
+            const collection = Iter.fromArray([1, 2, 3])
                 .map((x) => `${x} ✔`)
                 .map((x) => x.toUpperCase())
-                .collect_into_array()
-            const it = Iter.from_array(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'])
+                .intoArray()
+            const it = Iter.fromArray(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'])
                 .enumerate()
                 .map(([k, v]) => [k, v.toUpperCase()])
                 .filter(([k, v]) => k % 2 == 0)
@@ -63,7 +63,7 @@ describe('LazyIterator', () => {
 
     describe('.filter()', () => {
         it('filters', () => {
-            const counter = Iter.count_to(5).filter(x => x % 2 == 0);
+            const counter = Iter.countTo(5).filter(x => x % 2 == 0);
             expect(counter.next().value).to.eq(2);
             expect(counter.next().value).to.eq(4);
         });
@@ -71,7 +71,7 @@ describe('LazyIterator', () => {
 
     describe('.map() and .filter()', () => {
         it('maps and filters', () => {
-            const counter = Iter.count_to(5)
+            const counter = Iter.countTo(5)
                 .map(x => -x)
                 .filter(x => x % 2 == 0);
 
@@ -80,7 +80,7 @@ describe('LazyIterator', () => {
         });
 
         it('filters and maps', () => {
-            const counter = Iter.count_to(5)
+            const counter = Iter.countTo(5)
                 .filter(x => x % 2 == 0)
                 .map(x => -x);
 
@@ -93,9 +93,9 @@ describe('LazyIterator', () => {
     describe.only('.find()', () => {
         it('finds', () => {
             const hay = ['a', 'b', true, undefined, null, 'needle']
-            const needle1 = Iter.from_array(hay).find((x: any) => x === 5);
-            const needle2 = Iter.from_array(hay).find((x: any) => x === 'b');
-            const needle3 = Iter.from_array(hay).find((x: any) => !!x);
+            const needle1 = Iter.fromArray(hay).find((x: any) => x === 5);
+            const needle2 = Iter.fromArray(hay).find((x: any) => x === 'b');
+            const needle3 = Iter.fromArray(hay).find((x: any) => !!x);
             expect(needle1).to.eq(undefined);
             expect(needle2).to.eq('b');
             expect(needle3).to.eq('a');
@@ -105,7 +105,7 @@ describe('LazyIterator', () => {
 
     describe('.enumerate()', () => {
         it('enumerates', () => {
-            const counter = Iter.count_to(5).map(x => x * 100).enumerate();
+            const counter = Iter.countTo(5).map(x => x * 100).enumerate();
             expect(counter.next().value).to.deep.eq([0, 100]);
             expect(counter.next().value).to.deep.eq([1, 200]);
             expect(counter.next().value).to.deep.eq([2, 300]);
@@ -114,7 +114,7 @@ describe('LazyIterator', () => {
 
     describe('.take()', () => {
         it('takes', () => {
-            const counter = Iter.count_to(5).take(2);
+            const counter = Iter.countTo(5).take(2);
 
             expect(counter.next().value).to.eq(1);
             expect(counter.next().value).to.eq(2);
@@ -122,65 +122,65 @@ describe('LazyIterator', () => {
         });
 
         it('has a size_hint', () => {
-            const counter = Iter.count_to(5).take(2);
-            expect(counter.size_hint()).to.eq(2);
+            const counter = Iter.countTo(5).take(2);
+            expect(counter.sizeHint()).to.eq(2);
         });
     });
 
     describe('.skip()', () => {
         it('skips', () => {
-            const collection1 = Iter.count_to(10)
+            const collection1 = Iter.countTo(10)
                 .skip(2)
-                .collect_into_array();
+                .intoArray();
             expect(collection1).to.deep.eq([3,4,5,6,7,8,9,10]);
 
         });
         it('works with take', () => {
-            const collection2 = Iter.count_to(10)
+            const collection2 = Iter.countTo(10)
                 .skip(2)
                 .take(5)
-                .collect_into_array();
+                .intoArray();
             expect(collection2).to.deep.eq([3,4,5,6,7]);
         });
     });
 
     describe('.skipWhile()', () => {
         it('skips while x < 6', () => {
-            const collection1 = Iter.count_to(10)
+            const collection1 = Iter.countTo(10)
                 .skipWhile(x => x < 6)
-                .collect_into_array();
+                .intoArray();
             expect(collection1).to.deep.eq([6, 7, 8, 9, 10]);
         });
 
         it('skips while x <= 6', () => {
-            const collection1 = Iter.count_to(10)
+            const collection1 = Iter.countTo(10)
                 .skipWhile(x => x <= 6)
-                .collect_into_array();
+                .intoArray();
             expect(collection1).to.deep.eq([7, 8, 9, 10]);
         });
 
         it('skips while', () => {
-            const hey = Iter.from_array(['a', 'b', true, undefined, null, 'needle']);
-            const collection = hey.skipWhile((x) => x !== 'b').collect_into_array();
+            const hey = Iter.fromArray(['a', 'b', true, undefined, null, 'needle']);
+            const collection = hey.skipWhile((x) => x !== 'b').intoArray();
             expect(collection).to.deep.eq(['b', true, undefined, null, 'needle']);
 
-            const collection2 = Iter.from_array(['a', 'x', 'f', 3, 4, 5, 6, 7, 8])
+            const collection2 = Iter.fromArray(['a', 'x', 'f', 3, 4, 5, 6, 7, 8])
                 .skipWhile(x => typeof x === 'string')
                 .take(5)
-                .collect_into_array();
+                .intoArray();
             expect(collection2).to.deep.eq([3, 4, 5, 6, 7]);
         });
 
         it('handles empty', () => {
-            const next = Iter.from_array([])
+            const next = Iter.fromArray([])
                 .skipWhile(x => typeof x !== 'string')
                 .next();
             expect(next.value).to.be.undefined;
         });
 
         xit('handles unfindable', () => {
-            const hey = Iter.from_array(['a', 'b', true, undefined, null, 'needle']);
-            const collection = hey.skipWhile((x: any) => x !== 5).collect_into_array();
+            const hey = Iter.fromArray(['a', 'b', true, undefined, null, 'needle']);
+            const collection = hey.skipWhile((x: any) => x !== 5).intoArray();
             expect(collection).to.deep.eq([]);
         });
     });
@@ -188,27 +188,27 @@ describe('LazyIterator', () => {
     describe('termination', function() {
         this.timeout(1000);
         it('.skipWhile()', () => {
-            const collection = Iter.from_array([])
+            const collection = Iter.fromArray([])
                 .skipWhile(() => true)
-                .collect_into_array();
+                .intoArray();
         })
 
         it('.map()', () => {
-            const collection = Iter.from_array([])
+            const collection = Iter.fromArray([])
                 .map(x => !!x)
-                .collect_into_array();
+                .intoArray();
         })
 
         it('.filter()', () => {
-            Iter.from_array([])
+            Iter.fromArray([])
                 .filter(x => !!x)
-                .collect_into_array();
+                .intoArray();
         })
     });
 
     describe('.collect_to_array()', () => {
         it('collects', () => {
-            const counter = Iter.count_to(5).collect_into_array();
+            const counter = Iter.countTo(5).intoArray();
 
             expect(counter).to.deep.eq([1, 2, 3, 4, 5]);
         });
@@ -216,7 +216,7 @@ describe('LazyIterator', () => {
 
     describe('.cycle()', () => {
        it('cycles', () => {
-           const counter = Iter.count_to(3).cycle().take(5);
+           const counter = Iter.countTo(3).cycle().take(5);
             expect(counter.next().value).to.eq(1);
             expect(counter.next().value).to.eq(2);
             expect(counter.next().value).to.eq(3);
@@ -228,8 +228,8 @@ describe('LazyIterator', () => {
 
     describe('.zip()', () => {
         it('zips two simple iterators', () => {
-            const numbers = Iter.count_to(6);
-            const letters = Iter.from_array(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k']);
+            const numbers = Iter.countTo(6);
+            const letters = Iter.fromArray(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k']);
             const zipped = numbers.zip(letters);
             expect(zipped.next().value).to.deep.eq([1, 'a']);
             expect(zipped.next().value).to.deep.eq([2, 'b']);
@@ -247,18 +247,18 @@ describe('LazyIterator', () => {
     describe('Sized Iterators', () => {
         it('gives a proper size hint', () => {
             const a = [1, 2, 3, 4, 5];
-            const iter = Iter.from_array(a);
-            expect(iter.size_hint()).to.eq(a.length)
+            const iter = Iter.fromArray(a);
+            expect(iter.sizeHint()).to.eq(a.length)
         });
     });
 
     describe('.last()', () => {
         it('takes the last element', () => {
-            const iter = Iter.from_array([1, 2, 3, 4, 5]);
+            const iter = Iter.fromArray([1, 2, 3, 4, 5]);
             expect(iter.last()).to.eq(5);
         });
         it('keeps returning the last element', () => {
-            const iter = Iter.from_array([1, 2, 3, 4, 5]);
+            const iter = Iter.fromArray([1, 2, 3, 4, 5]);
             expect(iter.last()).to.eq(5);
             expect(iter.last()).to.eq(5);
             expect(iter.last()).to.eq(5);
