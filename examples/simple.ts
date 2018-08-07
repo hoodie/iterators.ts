@@ -1,5 +1,5 @@
 import { Iter, enable_debug_logging } from '../src';
-enable_debug_logging();
+// enable_debug_logging();
 
 const dir = (content: any) => console.dir(content, {colors: true, depth: 10});
 

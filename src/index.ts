@@ -130,8 +130,8 @@ export class Iter<T> implements LazyIterator<T> {
         return new TakeWhileAdapter(this, predicate);
     }
 
-    with(callback: Callback<T, void>): EachAdapter<T> {
-        return new EachAdapter(this, callback);
+    with(callback: Callback<T, void>): WithAdapter<T> {
+        return new WithAdapter(this, callback);
     }
 
 
@@ -229,20 +229,6 @@ class CycleAdapter<T> extends Iter<T> {
         }
     }
 
-}
-
-class EachAdapter<T> extends Iter<T> {
-    constructor(protected iterator: Iterator<T>, protected callback: Callback<T, void>) {
-        super();
-        __log(`.each()`)
-    }
-
-    next() {
-        const item = this.iterator.next()
-        this.callback(item.value)
-        __log(`each -> ${item.value}`);
-        return item;
-    }
 }
 
 class EnumerateAdapter<T> extends Iter<[number, T]> {
@@ -373,6 +359,20 @@ class TakeWhileAdapter<T> extends Iter<T> {
         } else {
             return { value: undefined, done: true } as any;
         }
+    }
+}
+
+class WithAdapter<T> extends Iter<T> {
+    constructor(protected iterator: Iterator<T>, protected callback: Callback<T, void>) {
+        super();
+        __log(`.each()`)
+    }
+
+    next() {
+        const item = this.iterator.next()
+        this.callback(item.value)
+        __log(`each -> ${item.value}`);
+        return item;
     }
 }
 
