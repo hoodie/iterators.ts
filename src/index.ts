@@ -18,6 +18,7 @@ export interface LazyIterator<T> extends Iterator<T> {
 
     /* Iterator skipping all elements which don't meet the given predicate */
     filter(predicate: Predicate<T>): LazyIterator<T>;
+    find(predicate: Predicate<T>): T | undefined;
 
     /* Iterator applying the given callback to each element */
     map<V, U extends [number, V]>(callback: Callback<T, U>): LazyIterator<[number, V]>;
@@ -40,15 +41,15 @@ export interface LazyIterator<T> extends Iterator<T> {
     /* like map, without modifying elements*/
     with(callback: Callback<T, void>): LazyIterator<T>;
 
-    // zip<O>(other: IIter<O>): IIter<T|O>;
+    zip<O>(other: LazyIterator<O>): LazyIterator<[T, O]>;
+    // alter<O>(other: LazyIterator<O>): LazyIterator<T | O>;
 
     /// consumers
 
     // count(): T // TODO count next() until done and throw if count >= Number.MAX_SAFE_INTEGER
     // nth(index: number): T;
-    // find(predicate: Callback<T>): T;
-    //sum(acc: T, callback: (a: T, b: T) => T):  T;
-    //fold(acc: T, callback: (a: T, b: T) => T):  T;
+    // sum(acc: T, callback: (a: T, b: T) => T):  T;
+    // fold(acc: T, callback: (a: T, b: T) => T):  T;
 
     collect_into_array(): Array<T>;
 }
@@ -98,6 +99,17 @@ export class Iter<T> implements LazyIterator<T> {
         return new FilterAdapter(this, predicate);
     }
 
+    find(predicate: Predicate<T>): T | undefined {
+        const iterated = this.skipWhile(x => !predicate(x));
+        console.dir({iterated});
+        const {value, done} = iterated.next()
+        console.dir({ value, done });
+        if (done) {
+            return undefined;
+        }
+        return value;
+    }
+
     map<U>(callback: Callback<T, U>): MapAdapter<T, U> {
         return new MapAdapter<T, U>(this, callback);
     }
@@ -118,18 +130,16 @@ export class Iter<T> implements LazyIterator<T> {
         return new TakeWhileAdapter(this, predicate);
     }
 
-    with(callback: Callback<T, void>): WithAdapter<T> {
-        return new WithAdapter(this, callback);
+    with(callback: Callback<T, void>): EachAdapter<T> {
+        return new EachAdapter(this, callback);
     }
 
 
-    // zip<O>(other: IIter<O>): IIter<T|O> {
-    //     return new ZipAdapter(this, other);
-    // }
+    zip<O>(other: LazyIterator<O>): LazyIterator<[T,  O]> {
+        return new ZipAdapter<T, O>(this, other);
+    }
 
     /// consumers
-
-    // find(): T | undefined;
 
     collect_into_array(): T[] {
         //return [...this];
@@ -178,7 +188,6 @@ export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
         }
     }
 
-
     size_hint(): number {
         return this.size
     }
@@ -205,6 +214,7 @@ class CycleAdapter<T> extends Iter<T> {
 
     constructor(protected iterator: Iterator<T>) {
         super();
+        __log(`.cycle()`)
         this.cache = [];
     }
 
@@ -221,9 +231,10 @@ class CycleAdapter<T> extends Iter<T> {
 
 }
 
-class WithAdapter<T> extends Iter<T> {
+class EachAdapter<T> extends Iter<T> {
     constructor(protected iterator: Iterator<T>, protected callback: Callback<T, void>) {
         super();
+        __log(`.each()`)
     }
 
     next() {
@@ -239,6 +250,7 @@ class EnumerateAdapter<T> extends Iter<[number, T]> {
 
     constructor(protected iterator: LazyIterator<T>) {
         super();
+        __log(`.enumerate()`)
     }
 
     next(): IteratorResult<[number, T]> {
@@ -250,6 +262,7 @@ class EnumerateAdapter<T> extends Iter<[number, T]> {
 class FilterAdapter<T> extends Iter<T> {
     constructor(protected iterator: Iterator<T>, protected predicate: Predicate<T>) {
         super();
+        __log(`.filter()`)
     }
 
     next() {
@@ -268,6 +281,7 @@ class FilterAdapter<T> extends Iter<T> {
 class MapAdapter<T, U> extends Iter<U> {
     constructor(protected iterator: Iterator<T>, protected callback: Callback<T, U>) {
         super();
+        __log(`.map()`);
     }
 
     next(): IteratorResult<U> {
@@ -287,7 +301,7 @@ class SkipAdapter<T> extends Iter<T> {
 
     constructor(protected iterator: Iterator<T>, skip: number) {
         super();
-        __log(`skip -> ${skip} values`);
+        __log(`.skip() -> ${skip} values`);
         for (let i = 0; i < skip; i++) {
             this.iterator.next();
         }
@@ -301,14 +315,30 @@ class SkipAdapter<T> extends Iter<T> {
 }
 
 class SkipWhileAdapter<T> extends Iter<T> {
-  private first: T | undefined;
+
+  private first: IteratorResult<T> | undefined;
+  private skippedFirst = false;
+
   constructor(protected iterator: Iterator<T>, predicate: Predicate<T>) {
     super();
+    __log(`.skipWhile()`);
+
+    while (true) {
+        this.first = this.iterator.next()
+        __log(`  skipping ${this.first.value}`);
+        if (this.first.done || !predicate(this.first.value)) {
+            break;
+        }
+    }
   }
 
-  // TODO: requires find()
-  next(): never {
-    throw new Error("unimplemented");
+  next() {
+      if (!this.skippedFirst && !!this.first) {
+          this.skippedFirst = true;
+          return this.first;
+      } else {
+          return this.iterator.next();
+      }
   }
 }
 
@@ -346,17 +376,23 @@ class TakeWhileAdapter<T> extends Iter<T> {
     }
 }
 
-class ZipAdapter<O> extends Iter<O> {
-    private iterators: Iterator<any>[];
+class ZipAdapter<T, O> extends Iter<[T, O]> {
+    private iterators: [Iterator<T>, Iterator<O>];
 
-    constructor(protected iterator: Iterator<any>, private other: Iterator<O>) {
+    constructor(first: Iterator<T>, other: Iterator<O>) {
         super();
-        this.iterators = [iterator, other];
+        this.iterators = [first, other];
+        __log(`.zip()`)
     }
 
-    next(): never {
-        throw new Error("unimplemented");
-        // return {value: undefined as any, done: true}
+    next(): IteratorResult<[T, O]> {
+        const a = this.iterators[0].next();
+        const b = this.iterators[1].next();
+        __log(`.zip() -> [${a.value}, ${b.value}]`)
+            return {
+                value: [a.value, b.value],
+                done: (a.done || b.done)
+            }
     }
 
 }
