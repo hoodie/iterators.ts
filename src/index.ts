@@ -100,10 +100,7 @@ export class Iter<T> implements LazyIterator<T> {
     }
 
     find(predicate: Predicate<T>): T | undefined {
-        const iterated = this.skipWhile(x => !predicate(x));
-        console.dir({iterated});
-        const {value, done} = iterated.next()
-        console.dir({ value, done });
+        const {value, done} = this.skipWhile(x => !predicate(x)).next()
         if (done) {
             return undefined;
         }

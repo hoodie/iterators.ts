@@ -3,7 +3,7 @@ import 'mocha';
 import { expect } from 'chai';
 
 import { Iter, enable_debug_logging } from '../src';
-enable_debug_logging();
+// enable_debug_logging();
 
 describe('LazyIterator', () => {
 
@@ -90,7 +90,7 @@ describe('LazyIterator', () => {
 
     });
 
-    describe.only('.find()', () => {
+    describe('.find()', () => {
         it('finds', () => {
             const hay = ['a', 'b', true, undefined, null, 'needle']
             const needle1 = Iter.fromArray(hay).find((x: any) => x === 5);
@@ -178,7 +178,7 @@ describe('LazyIterator', () => {
             expect(next.value).to.be.undefined;
         });
 
-        xit('handles unfindable', () => {
+        it('handles unfindable', () => {
             const hey = Iter.fromArray(['a', 'b', true, undefined, null, 'needle']);
             const collection = hey.skipWhile((x: any) => x !== 5).intoArray();
             expect(collection).to.deep.eq([]);

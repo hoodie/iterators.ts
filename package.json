@@ -17,6 +17,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "pretest": "tsc",
     "test": "mocha ./lib/test/**"
   }
 }
