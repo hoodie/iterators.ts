@@ -7,17 +7,20 @@
   "author": "Hendrik Sollich",
   "license": "MIT",
   "devDependencies": {
-    "@types/chai": "^4.1.4",
+    "@types/benchmark": "^1.0.31",
+    "@types/chai": "^4.1.6",
     "@types/mocha": "^5.2.5",
-    "@types/node": "^10.5.6",
-    "chai": "^4.1.2",
+    "@types/node": "^10.11.3",
+    "benchmark": "^2.1.4",
+    "chai": "^4.2.0",
     "mocha": "^5.2.0",
-    "ts-node": "^7.0.0",
-    "typescript": "^3.0.1"
+    "ts-node": "^7.0.1",
+    "typescript": "^3.1.1"
   },
   "scripts": {
     "build": "tsc",
     "pretest": "tsc",
-    "test": "mocha ./lib/test/**"
+    "test": "mocha ./lib/test/**",
+    "bench": "node ./lib/examples/benchmarks.js"
   }
 }

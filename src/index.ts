@@ -7,7 +7,7 @@ let __log = (_content: any) => { };
 
 
 /// Interface
-export interface LazyIterator<T> extends Iterator<T> {
+export interface LazyIterator<T> extends Iterator<T>, Iterable<T> {
     next(value?: any): IteratorResult<T>;
 
     /// Adapters
@@ -79,6 +79,10 @@ export class Iter<T> implements LazyIterator<T> {
     }
 
     constructor(protected iterator?: Iterator<any>) { }
+
+    [Symbol.iterator]() {
+        return this;
+    }
 
     /// Iterable Protocol
     next(value?: T): IteratorResult<T> {
