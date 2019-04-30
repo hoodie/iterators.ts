@@ -9,7 +9,7 @@
   "devDependencies": {
     "@types/benchmark": "1.0.31",
     "@types/chai": "4.1.7",
-    "@types/mocha": "5.2.5",
+    "@types/mocha": "5.2.6",
     "@types/node": "10.11.3",
     "benchmark": "2.1.4",
     "chai": "4.2.0",
