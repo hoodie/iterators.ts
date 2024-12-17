@@ -2,11 +2,14 @@ export type Callback<T, U> = (input: T) => U;
 export type Predicate<T> = (input: T) => boolean;
 
 // const __dir = (content: any) => console.dir(content, {colors: true, depth: 10});
+// deno-lint-ignore no-explicit-any
 const __dir = (_content: any) => {};
+// deno-lint-ignore no-explicit-any
 let __log = (_content: any) => {};
 
 /// Interface
 export interface LazyIterator<T> extends Iterator<T>, Iterable<T> {
+  // deno-lint-ignore no-explicit-any
   next(value?: any): IteratorResult<T>;
 
   /// Adapters
@@ -78,18 +81,19 @@ export class Iter<T> implements LazyIterator<T> {
     return new SizedIter(limit, inner_count_to(limit));
   }
 
+  // deno-lint-ignore no-explicit-any
   constructor(protected iterator?: Iterator<any>) {}
 
-  [Symbol.iterator]() {
+  [Symbol.iterator](): Iter<T> {
     return this;
   }
 
   /// Iterable Protocol
   next(value?: T): IteratorResult<T> {
-    if (!!this.iterator) {
+    if (this.iterator) {
       return this.iterator.next(value);
     } else {
-      return { value: undefined, done: true } as any;
+      return { value: undefined, done: true };
     }
   }
 
@@ -181,7 +185,7 @@ export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
 
     let v = undefined;
     while (true) {
-      let n = this.iterator!.next();
+      const n = this.iterator!.next();
       __dir({ n, v });
       if (n.done) {
         this.__lastElement = v;
@@ -256,7 +260,7 @@ class FilterAdapter<T> extends Iter<T> {
     __log(`.filter()`);
   }
 
-  override next() {
+  override next(): IteratorResult<T> {
     while (true) {
       const item = this.iterator.next();
 
@@ -282,6 +286,7 @@ class MapAdapter<T, U> extends Iter<U> {
     const { value, done } = this.iterator.next();
 
     if (done) {
+      // deno-lint-ignore no-explicit-any
       return { value, done } as any;
     }
 
@@ -300,7 +305,7 @@ class SkipAdapter<T> extends Iter<T> {
     }
   }
 
-  override next() {
+  override next(): IteratorResult<T> {
     const n = this.iterator.next();
     __log(`take -> ${n.value}`);
     return n;
@@ -327,7 +332,7 @@ class SkipWhileAdapter<T> extends Iter<T> {
     }
   }
 
-  override next() {
+  override next(): IteratorResult<T> {
     if (!this.skippedFirst && !!this.first) {
       this.skippedFirst = true;
       return this.first;
@@ -344,13 +349,14 @@ class TakeAdapter<T> extends SizedIter<T> {
     super(limit, iterator);
   }
 
-  override next() {
+  override next(): IteratorResult<T> {
     if (this.took < this.limit) {
       this.took++;
       const n = this.iterator.next();
       __log(`take -> ${n.value}`);
       return n;
     } else {
+      // deno-lint-ignore no-explicit-any
       return { value: undefined, done: true } as any;
     }
   }
@@ -364,11 +370,12 @@ class TakeWhileAdapter<T> extends Iter<T> {
     super();
   }
 
-  override next() {
+  override next(): IteratorResult<T> {
     const n = this.iterator.next();
     if (this.predicate(n.value)) {
       return n;
     } else {
+      // deno-lint-ignore no-explicit-any
       return { value: undefined, done: true } as any;
     }
   }
@@ -383,7 +390,7 @@ class WithAdapter<T> extends Iter<T> {
     __log(`.each()`);
   }
 
-  override next() {
+  override next(): IteratorResult<T> {
     const item = this.iterator.next();
     this.callback(item.value);
     __log(`each -> ${item.value}`);
@@ -413,6 +420,7 @@ class ZipAdapter<T, O> extends Iter<[T, O]> {
 
 /// utilities
 
+// deno-lint-ignore no-unused-vars
 function* inner_from_array<T>(a: T[]): IterableIterator<T> {
   for (const x of a) {
     yield x;
@@ -426,6 +434,7 @@ function* inner_count_to(limit: number): IterableIterator<number> {
   }
 }
 
-// export function enable_debug_logging() {
-//     __log = (content: any) => console.log(`   ${content}`);
-// }
+export function enable_debug_logging() {
+  // deno-lint-ignore no-explicit-any
+  __log = (content: any) => console.log(`   ${content}`);
+}

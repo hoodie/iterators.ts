@@ -42,12 +42,13 @@ describe("LazyIterator", () => {
       expect(collection).toEqual(["A", "B", "C"]);
     });
 
-    it("infers return type from callback", () => { // only needs to compile
+    it("infers return type from callback", () => {
+      // only needs to compile
       const collection = Iter.fromArray([1, 2, 3])
         .map((x) => `${x} ✔`)
         .map((x) => x.toUpperCase())
         .intoArray();
-      const it = Iter.fromArray([
+      const _it = Iter.fromArray([
         "a",
         "b",
         "c",
@@ -63,7 +64,7 @@ describe("LazyIterator", () => {
       ])
         .enumerate()
         .map(([k, v]) => [k, v.toUpperCase()])
-        .filter(([k, v]) => k % 2 == 0)
+        .filter(([k, _v]) => k % 2 == 0)
         .map(([, v]) => v);
       expect(collection).toEqual(["1 ✔", "2 ✔", "3 ✔"]);
     });
@@ -100,9 +101,10 @@ describe("LazyIterator", () => {
   describe(".find()", () => {
     it("finds", () => {
       const hay = ["a", "b", true, undefined, null, "needle"];
+      // deno-lint-ignore no-explicit-any
       const needle1 = Iter.fromArray(hay).find((x: any) => x === 5);
-      const needle2 = Iter.fromArray(hay).find((x: any) => x === "b");
-      const needle3 = Iter.fromArray(hay).find((x: any) => !!x);
+      const needle2 = Iter.fromArray(hay).find((x) => x === "b");
+      const needle3 = Iter.fromArray(hay).find((x) => !!x);
       expect(needle1).toEqual(undefined);
       expect(needle2).toEqual("b");
       expect(needle3).toEqual("a");
@@ -111,7 +113,9 @@ describe("LazyIterator", () => {
 
   describe(".enumerate()", () => {
     it("enumerates", () => {
-      const counter = Iter.countTo(5).map((x) => x * 100).enumerate();
+      const counter = Iter.countTo(5)
+        .map((x) => x * 100)
+        .enumerate();
       expect(counter.next().value).toEqual([0, 100]);
       expect(counter.next().value).toEqual([1, 200]);
       expect(counter.next().value).toEqual([2, 300]);
@@ -135,16 +139,11 @@ describe("LazyIterator", () => {
 
   describe(".skip()", () => {
     it("skips", () => {
-      const collection1 = Iter.countTo(10)
-        .skip(2)
-        .intoArray();
+      const collection1 = Iter.countTo(10).skip(2).intoArray();
       expect(collection1).toEqual([3, 4, 5, 6, 7, 8, 9, 10]);
     });
     it("works with take", () => {
-      const collection2 = Iter.countTo(10)
-        .skip(2)
-        .take(5)
-        .intoArray();
+      const collection2 = Iter.countTo(10).skip(2).take(5).intoArray();
       expect(collection2).toEqual([3, 4, 5, 6, 7]);
     });
   });
@@ -185,6 +184,7 @@ describe("LazyIterator", () => {
 
     it("handles unfindable", () => {
       const hey = Iter.fromArray(["a", "b", true, undefined, null, "needle"]);
+      // deno-lint-ignore no-explicit-any
       const collection = hey.skipWhile((x: any) => x !== 5).intoArray();
       expect(collection).toEqual([]);
     });
@@ -193,13 +193,13 @@ describe("LazyIterator", () => {
   describe("termination", function () {
     // this.timeout(1000);
     it(".skipWhile()", () => {
-      const collection = Iter.fromArray([])
+      const _collection = Iter.fromArray([])
         .skipWhile(() => true)
         .intoArray();
     });
 
     it(".map()", () => {
-      const collection = Iter.fromArray([])
+      const _collection = Iter.fromArray([])
         .map((x) => !!x)
         .intoArray();
     });
