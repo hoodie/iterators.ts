@@ -28,3 +28,5 @@ const collected = it.take(3)
 const collected2 = it
   .intoArray(); // -> ['G', 'I', 'K']
 ```
+
+This is now published under <https://jsr.io/@hoodie/iterators>.
