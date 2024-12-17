@@ -1,0 +1,14 @@
+{
+  "name": "@hoodie/iterators",
+  "version": "0.1.0",
+  "author": "Hendrik Sollich",
+  "exports": "./src/mod.ts",
+  "license": "MIT",
+  "tasks": {
+    "dev": "deno test --watch src/mod.ts"
+  },
+  "imports": {
+    "@std/expect": "jsr:@std/expect@^1.0.9",
+    "@std/testing": "jsr:@std/testing@^1.0.6"
+  }
+}

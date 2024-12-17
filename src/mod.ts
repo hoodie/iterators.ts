@@ -160,7 +160,7 @@ export class Iter<T> implements LazyIterator<T> {
 export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
     private __lastElement?: T;
 
-    constructor(protected size: number, protected iterator: Iterator<T>) {
+    constructor(protected size: number, protected override iterator: Iterator<T>) {
         super();
     }
 
@@ -193,7 +193,7 @@ export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
         return this.size
     }
 
-    intoArray(): T[] {
+    override intoArray(): T[] {
         const all = new Array<T>(this.size);
         let nxt: IteratorResult<T> | undefined;
         let i = 0
@@ -213,13 +213,13 @@ export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
 class CycleAdapter<T> extends Iter<T> {
     private cache: Array<T>
 
-    constructor(protected iterator: Iterator<T>) {
+    constructor(protected override iterator: Iterator<T>) {
         super();
         __log(`.cycle()`)
         this.cache = [];
     }
 
-    next(): IteratorResult<T> {
+    override next(): IteratorResult<T> {
         const n = this.iterator.next();
         if (n.done) {
             this.iterator = (<Array<T>>this.cache)[Symbol.iterator]();
@@ -235,24 +235,24 @@ class CycleAdapter<T> extends Iter<T> {
 class EnumerateAdapter<T> extends Iter<[number, T]> {
     private count = 0;
 
-    constructor(protected iterator: LazyIterator<T>) {
+    constructor(protected override iterator: LazyIterator<T>) {
         super();
         __log(`.enumerate()`)
     }
 
-    next(): IteratorResult<[number, T]> {
+    override next(): IteratorResult<[number, T]> {
         const item = this.iterator.next()
         return { value: [this.count++, item.value], done: item.done };
     }
 }
 
 class FilterAdapter<T> extends Iter<T> {
-    constructor(protected iterator: Iterator<T>, protected predicate: Predicate<T>) {
+    constructor(protected override iterator: Iterator<T>, protected predicate: Predicate<T>) {
         super();
         __log(`.filter()`)
     }
 
-    next() {
+    override  next() {
         while (true) {
             const item = this.iterator.next()
 
@@ -266,12 +266,12 @@ class FilterAdapter<T> extends Iter<T> {
 }
 
 class MapAdapter<T, U> extends Iter<U> {
-    constructor(protected iterator: Iterator<T>, protected callback: Callback<T, U>) {
+    constructor(protected override iterator: Iterator<T>, protected callback: Callback<T, U>) {
         super();
         __log(`.map()`);
     }
 
-    next(): IteratorResult<U> {
+    override next(): IteratorResult<U> {
         const {value, done} = this.iterator.next()
 
         if (done) {
@@ -286,7 +286,7 @@ class MapAdapter<T, U> extends Iter<U> {
 
 class SkipAdapter<T> extends Iter<T> {
 
-    constructor(protected iterator: Iterator<T>, skip: number) {
+    constructor(protected override iterator: Iterator<T>, skip: number) {
         super();
         __log(`.skip() -> ${skip} values`);
         for (let i = 0; i < skip; i++) {
@@ -294,7 +294,7 @@ class SkipAdapter<T> extends Iter<T> {
         }
     }
 
-    next() {
+    override next() {
             const n = this.iterator.next();
             __log(`take -> ${n.value}`);
             return n;
@@ -306,7 +306,7 @@ class SkipWhileAdapter<T> extends Iter<T> {
   private first: IteratorResult<T> | undefined;
   private skippedFirst = false;
 
-  constructor(protected iterator: Iterator<T>, predicate: Predicate<T>) {
+  constructor(protected override iterator: Iterator<T>, predicate: Predicate<T>) {
     super();
     __log(`.skipWhile()`);
 
@@ -319,7 +319,7 @@ class SkipWhileAdapter<T> extends Iter<T> {
     }
   }
 
-  next() {
+  override next() {
       if (!this.skippedFirst && !!this.first) {
           this.skippedFirst = true;
           return this.first;
@@ -332,11 +332,11 @@ class SkipWhileAdapter<T> extends Iter<T> {
 class TakeAdapter<T> extends SizedIter<T> {
     private took = 0;
 
-    constructor(protected iterator: Iterator<T>, private limit: number) {
+    constructor(protected override iterator: Iterator<T>, private limit: number) {
         super(limit, iterator);
     }
 
-    next() {
+    override next() {
         if (this.took < this.limit) {
             this.took++;
             const n = this.iterator.next();
@@ -349,11 +349,11 @@ class TakeAdapter<T> extends SizedIter<T> {
 }
 
 class TakeWhileAdapter<T> extends Iter<T> {
-    constructor(protected iterator: Iterator<T>, private predicate: Predicate<T>) {
+    constructor(protected override iterator: Iterator<T>, private predicate: Predicate<T>) {
         super();
     }
 
-    next() {
+   override next() {
         const n = this.iterator.next();
         if (this.predicate(n.value)) {
             return n;
@@ -364,12 +364,12 @@ class TakeWhileAdapter<T> extends Iter<T> {
 }
 
 class WithAdapter<T> extends Iter<T> {
-    constructor(protected iterator: Iterator<T>, protected callback: Callback<T, void>) {
+    constructor(protected override iterator: Iterator<T>, protected callback: Callback<T, void>) {
         super();
         __log(`.each()`)
     }
 
-    next() {
+    override next() {
         const item = this.iterator.next()
         this.callback(item.value)
         __log(`each -> ${item.value}`);
@@ -386,7 +386,7 @@ class ZipAdapter<T, O> extends Iter<[T, O]> {
         __log(`.zip()`)
     }
 
-    next(): IteratorResult<[T, O]> {
+    override next(): IteratorResult<[T, O]> {
         const a = this.iterators[0].next();
         const b = this.iterators[1].next();
         __log(`.zip() -> [${a.value}, ${b.value}]`)
@@ -413,6 +413,6 @@ function* inner_count_to(limit: number): IterableIterator<number> {
     }
 }
 
-export function enable_debug_logging() {
-    __log = (content: any) => console.log(`   ${content}`);
-}
+// export function enable_debug_logging() {
+//     __log = (content: any) => console.log(`   ${content}`);
+// }
