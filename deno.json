@@ -1,11 +1,12 @@
 {
   "name": "@hoodie/iterators",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Hendrik Sollich",
   "exports": "./src/mod.ts",
   "license": "MIT",
   "tasks": {
-    "dev": "deno test --watch src/mod.ts"
+    "dev": "deno test --watch src/mod.ts",
+    "doc": "deno doc --html --name=\"lazy iterators\" ./src/mod.ts"
   },
   "imports": {
     "@std/expect": "jsr:@std/expect@^1.0.9",

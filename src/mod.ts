@@ -1,4 +1,15 @@
+/**
+ * This module provides a lazy iterator interface.
+ */
+
+/**
+ * Callback function passed to the `map` method.
+ */
 export type Callback<T, U> = (input: T) => U;
+
+/**
+ * Predicate function passed to the `filter` method.
+ */
 export type Predicate<T> = (input: T) => boolean;
 
 // const __dir = (content: any) => console.dir(content, {colors: true, depth: 10});
@@ -8,21 +19,38 @@ const __dir = (_content: any) => {};
 let __log = (_content: any) => {};
 
 /// Interface
+/**
+ * This is the main iterator interface.
+ */
 export interface LazyIterator<T> extends Iterator<T>, Iterable<T> {
-  // deno-lint-ignore no-explicit-any
-  next(value?: any): IteratorResult<T>;
+  /**
+   * Advances the iterator and returns the next value.
+   * Iterators conform to the [iterator protocol](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterator_protocol).
+   */
+  next(): IteratorResult<T>;
 
   /// Adapters
 
   // chain<U extends ProperIterator><other: U>: ProperIterator<T>;
 
+  /**
+   * Creates an iterator which yields the current index and the value of the original iterator.
+   */
   enumerate(): LazyIterator<[number, T]>;
 
-  /* Iterator skipping all elements which don't meet the given predicate */
+  /**
+   * Creates an iterator skipping all elements which don't meet the given predicate.
+   */
   filter(predicate: Predicate<T>): LazyIterator<T>;
+
+  /**
+   * Finds the first element that satisfies the predicate.
+   */
   find(predicate: Predicate<T>): T | undefined;
 
-  /* Iterator applying the given callback to each element */
+  /**
+   * Creates an iterator applying the given callback to each element.
+   */
   map<V, U extends [number, V]>(
     callback: Callback<T, U>,
   ): LazyIterator<[number, V]>;
@@ -32,12 +60,24 @@ export interface LazyIterator<T> extends Iterator<T>, Iterable<T> {
   // partition
   // rev (requires double ended iterator)
   // step_by(step: number): number;
+
+  /**
+   * Creates an iterator skipping the first `limit` elements.
+   */
   skip(limit: number): LazyIterator<T>;
+  /**
+   * Creates an iterator skipping elements while predicate is `true`.
+   */
   skipWhile(predicate: Predicate<T>): LazyIterator<T>;
 
+  /**
+   * Creates an iterator yielding the first `limit` elements.
+   */
   take(limit: number): SizedLazyIterator<T>;
 
-  /* Iterator yielding elements while predicate is `true` */
+  /**
+   * Creates an iterator yielding elements while predicate is `true`.
+   */
   takeWhile(predicate: Predicate<T>): LazyIterator<T>;
 
   // window
@@ -45,6 +85,9 @@ export interface LazyIterator<T> extends Iterator<T>, Iterable<T> {
   /* like map, without modifying elements*/
   with(callback: Callback<T, void>): LazyIterator<T>;
 
+  /**
+   * Creates an Iterator that ‘Zips up’ two iterators into a single iterator of pairs.
+   */
   zip<O>(other: LazyIterator<O>): LazyIterator<[T, O]>;
   // alter<O>(other: LazyIterator<O>): LazyIterator<T | O>;
 
@@ -55,28 +98,53 @@ export interface LazyIterator<T> extends Iterator<T>, Iterable<T> {
   // sum(acc: T, callback: (a: T, b: T) => T):  T;
   // fold(acc: T, callback: (a: T, b: T) => T):  T;
 
+  /**
+   * Collects all elements into an array.
+   */
   intoArray(): Array<T>;
 }
 
 export interface SizedLazyIterator<T> extends LazyIterator<T> {
+  /**
+   * Returns the number of elements in the iterator.
+   */
   count(): number;
 
+  /**
+   * Creates an iterator that cycles through the elements of the original iterator.
+   * It will return the first element again once the last element has been returned.
+   */
   cycle(): LazyIterator<T>;
 
+  /**
+   * Returns the last element of the iterator.
+   */
   last(): T | undefined;
 
+  /**
+   * Returns the number of elements in the iterator.
+   */
   sizeHint(): number;
 }
 
 /**
- * Base Iterator
- * T is
+ * Base Iterator.
+ * Yields elements from an inner iterator.
+ * Conforms to the [iterator protocol](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterator_protocol).
  */
 export class Iter<T> implements LazyIterator<T> {
+  /**
+   * Creates an iterator from an array.
+   */
   static fromArray<T>(a: Array<T>): SizedLazyIterator<T> {
     return new SizedIter(a.length, a[Symbol.iterator]());
   }
 
+  /**
+   * Creates an iterator that counts from 1 to `limit`.
+   * @param limit
+   * @returns SizedLazyIterator<number>
+   */
   static countTo(limit: number): SizedLazyIterator<number> {
     return new SizedIter(limit, inner_count_to(limit));
   }
@@ -99,14 +167,26 @@ export class Iter<T> implements LazyIterator<T> {
 
   /// adapters
 
+  /**
+   * Creates an iterator which yields the current index and the value of the original iterator.
+   * @returns LazyIterator<[number, T]>
+   */
   enumerate(): EnumerateAdapter<T> {
     return new EnumerateAdapter(this);
   }
 
+  /**
+   * Creates an iterator skipping all elements which don't meet the given predicate.
+   * @param predicate
+   * @returns
+   */
   filter(predicate: Predicate<T>): FilterAdapter<T> {
     return new FilterAdapter(this, predicate);
   }
 
+  /**
+   * Finds the first element that satisfies the predicate.
+   */
   find(predicate: Predicate<T>): T | undefined {
     const { value, done } = this.skipWhile((x) => !predicate(x)).next();
     if (done) {
@@ -115,36 +195,63 @@ export class Iter<T> implements LazyIterator<T> {
     return value;
   }
 
+  /**
+   * Creates an iterator applying the given callback to each element.
+   */
   map<U>(callback: Callback<T, U>): MapAdapter<T, U> {
     return new MapAdapter<T, U>(this, callback);
   }
 
+  /**
+   * Creates an iterator yielding the first `limit` elements.
+   */
   take(limit: number): TakeAdapter<T> {
     return new TakeAdapter(this, limit);
   }
 
+  /**
+   * Creates an iterator skipping the first `limit` elements.
+   */
   skip(limit: number): SkipAdapter<T> {
     return new SkipAdapter(this, limit);
   }
 
+  /**
+   * Creates an iterator skipping elements while predicate is `true`.
+   */
   skipWhile(predicate: Predicate<T>): SkipWhileAdapter<T> {
     return new SkipWhileAdapter(this, predicate);
   }
 
+  /**
+   * Creates an iterator yielding the first `limit` elements.
+   */
   takeWhile(predicate: Predicate<T>): TakeWhileAdapter<T> {
     return new TakeWhileAdapter(this, predicate);
   }
 
+  /**
+   * Creates an iterator yielding elements while predicate is `true`.
+   */
   with(callback: Callback<T, void>): WithAdapter<T> {
     return new WithAdapter(this, callback);
   }
 
+  /**
+   * Creates an Iterator that ‘Zips up’ two iterators into a single iterator of pairs.
+   * @param other
+   * @returns
+   */
   zip<O>(other: LazyIterator<O>): LazyIterator<[T, O]> {
     return new ZipAdapter<T, O>(this, other);
   }
 
   /// consumers
 
+  /**
+   * Collects all elements into an array.
+   * @returns Array<T>
+   */
   intoArray(): T[] {
     //return [...this];
     const all = [];
@@ -160,7 +267,7 @@ export class Iter<T> implements LazyIterator<T> {
   }
 }
 
-export class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
+class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
   private __lastElement?: T;
 
   constructor(
