@@ -110,6 +110,8 @@ export interface SizedLazyIterator<T> extends LazyIterator<T> {
    */
   count(): number;
 
+  chain<U>(successor: Iterator<U>): LazyIterator<T | U>;
+
   /**
    * Creates an iterator that cycles through the elements of the original iterator.
    * It will return the first element again once the last element has been returned.
@@ -281,6 +283,10 @@ class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
     return this.sizeHint();
   }
 
+  chain<U>(successor: Iterator<U>): ChainAdapter<T, U> {
+    return new ChainAdapter(this, successor);
+  }
+
   cycle(): CycleAdapter<T> {
     return new CycleAdapter(this);
   }
@@ -323,6 +329,25 @@ class SizedIter<T> extends Iter<T> implements SizedLazyIterator<T> {
 
 /** adapters */
 
+class ChainAdapter<T, U> extends Iter<T | U> {
+  constructor(
+    protected override iterator: Iterator<T>,
+    private successor: Iterator<U>,
+  ) {
+    super();
+    __log(`.chain()`);
+  }
+
+  override next(): IteratorResult<T | U> {
+    const next = this.iterator.next();
+
+    if (next.done) {
+      return this.successor.next();
+    } else {
+      return next;
+    }
+  }
+}
 class CycleAdapter<T> extends Iter<T> {
   private cache: Array<T>;
 

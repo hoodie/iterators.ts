@@ -231,6 +231,20 @@ describe("LazyIterator", () => {
     });
   });
 
+  describe(".chain()", () => {
+    it("chains", () => {
+      const counter = Iter.countTo(3).chain(
+        Iter.countTo(50).map(String).skip(45),
+      ).take(5);
+      expect(counter.next().value).toEqual(1);
+      expect(counter.next().value).toEqual(2);
+      expect(counter.next().value).toEqual(3);
+      expect(counter.next().value).toEqual("46");
+      expect(counter.next().value).toEqual("47");
+      expect(counter.next().done).toBeTruthy;
+    });
+  });
+
   describe(".zip()", () => {
     it("zips two simple iterators", () => {
       const numbers = Iter.countTo(6);
